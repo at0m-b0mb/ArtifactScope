@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { Settings2, Save, Database, Download, Upload } from 'lucide-react'
+import { Settings2, Save, Database, Download, Upload, Palette, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input, Select } from '../components/ui/Input'
 import { api } from '../lib/api'
 import { useToast } from '../components/ui/Toast'
+import { getAccent, setAccent, getDensity, setDensity, type Accent, type Density } from '../lib/storage'
+import { cn } from '../lib/cn'
 
 interface AppSettings {
   theme: string
@@ -39,6 +41,8 @@ export default function Settings(): React.JSX.Element {
   const [saving, setSaving] = useState(false)
   const [dbPath, setDbPath] = useState('')
   const [appVersion, setAppVersion] = useState('')
+  const [accent, setAccentState] = useState<Accent>(getAccent())
+  const [density, setDensityState] = useState<Density>(getDensity())
 
   useEffect(() => {
     api.settings.get().then(r => {
@@ -211,18 +215,70 @@ export default function Settings(): React.JSX.Element {
 
       {/* Appearance */}
       <Card>
-        <CardHeader><CardTitle>Appearance</CardTitle></CardHeader>
-        <Select
-          label="Theme"
-          value={settings.theme}
-          onChange={e => set('theme', e.target.value)}
-          className="w-40"
-        >
-          <option value="dark">Dark (Default)</option>
-          <option value="light">Light</option>
-          <option value="system">System</option>
-        </Select>
-        <p className="text-xs text-muted mt-2">Theme changes require app restart.</p>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <Palette className="w-4 h-4 text-muted" />
+        </CardHeader>
+        <div className="space-y-5">
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Accent color</p>
+            <div className="flex gap-2">
+              {([
+                { id: 'purple',  c: '#7c3aed' },
+                { id: 'cyan',    c: '#0891b2' },
+                { id: 'emerald', c: '#059669' },
+                { id: 'rose',    c: '#e11d48' },
+                { id: 'amber',   c: '#d97706' },
+              ] as { id: Accent; c: string }[]).map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setAccent(p.id); setAccentState(p.id) }}
+                  className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+                    accent === p.id ? 'ring-2 ring-white/80 scale-110' : 'ring-1 ring-surface-4 hover:scale-105'
+                  )}
+                  style={{ backgroundColor: p.c }}
+                  title={p.id}
+                >
+                  {accent === p.id && <Check className="w-4 h-4 text-white" />}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted mt-1.5">Applies instantly — no restart needed.</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Density</p>
+            <div className="inline-flex rounded-lg border border-surface-4 bg-surface-3 p-0.5">
+              {(['cozy', 'compact'] as Density[]).map(d => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => { setDensity(d); setDensityState(d) }}
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded-md transition-colors capitalize',
+                    density === d ? 'bg-primary-600 text-white' : 'text-muted hover:text-white'
+                  )}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Theme</p>
+            <Select
+              value={settings.theme}
+              onChange={e => set('theme', e.target.value)}
+              className="w-40"
+            >
+              <option value="dark">Dark (default)</option>
+              <option value="light" disabled>Light (coming soon)</option>
+            </Select>
+          </div>
+        </div>
       </Card>
 
       {/* Database */}

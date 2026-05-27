@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Hash, Plus, Upload, Search, Trash2, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react'
+import { Hash, Plus, Upload, Download, Search, Trash2, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Progress } from '../components/ui/Progress'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { exportCSV } from '../lib/export'
 
 interface HashRow { hash: string; algorithm: string; classification: string; filename: string; notes: string; added_at: string }
 interface HashStats { total: number; known_bad: number; known_good: number; suspicious: number; unknown: number }
@@ -128,6 +129,16 @@ export default function HashDB(): React.JSX.Element {
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="ghost" icon={<Search className="w-3.5 h-3.5" />} onClick={() => setShowLookup(true)}>Lookup</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Download className="w-3.5 h-3.5" />}
+            onClick={() => exportCSV(filtered as unknown as Record<string, unknown>[], 'hash-database',
+              ['hash', 'algorithm', 'classification', 'filename', 'notes', 'added_at'])}
+            disabled={filtered.length === 0}
+          >
+            Export
+          </Button>
           <Button size="sm" variant="outline" icon={<Upload className="w-3.5 h-3.5" />} onClick={() => setShowImport(true)}>Import CSV</Button>
           <Button size="sm" variant="primary" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => setShowAdd(true)}>Add Hash</Button>
         </div>

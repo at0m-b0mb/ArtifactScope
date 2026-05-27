@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FileSearch, Copy, CheckCircle, AlertTriangle } from 'lucide-react'
+import { FileSearch, Copy, CheckCircle, AlertTriangle, Download } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -11,6 +11,8 @@ import { HexView } from '../components/ui/HexView'
 import { api } from '../lib/api'
 import { formatBytes, formatDate, entropyLabel } from '../lib/format'
 import { useToast } from '../components/ui/Toast'
+import { pushRecentFile } from '../lib/storage'
+import { exportJSON } from '../lib/export'
 
 interface FileResult {
   path: string; name: string; extension: string; size: number
@@ -54,7 +56,9 @@ export default function FileAnalyzer(): React.JSX.Element {
     const r = await api.file.analyze(path)
     setLoading(false)
     if (r.error) { error('Analysis failed', r.error); return }
-    setResult(r.data as FileResult)
+    const fr = r.data as FileResult
+    setResult(fr)
+    pushRecentFile({ path: fr.path, label: fr.name, kind: fr.magic.type || 'file', page: '/file-analyzer' })
 
     // Check hash DB
     if (r.data) {
@@ -121,6 +125,14 @@ export default function FileAnalyzer(): React.JSX.Element {
                 </div>
               </div>
               <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  icon={<Download className="w-3.5 h-3.5" />}
+                  onClick={() => exportJSON(result, `${result.name}-analysis`)}
+                >
+                  Export JSON
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => { setResult(null); setHashLookup(null) }}>
                   Analyze Another
                 </Button>

@@ -2,6 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme tokens (runtime-swappable accent) ──────────────────────────── */
+:root {
+  /* default = purple */
+  --p-400: 167 139 250;
+  --p-500: 139 92 246;
+  --p-600: 124 58 237;
+  --p-700: 109 40 217;
+  --p-900: 76 29 149;
+}
+:root[data-accent='cyan'] {
+  --p-400: 34 211 238;
+  --p-500: 6 182 212;
+  --p-600: 8 145 178;
+  --p-700: 14 116 144;
+  --p-900: 22 78 99;
+}
+:root[data-accent='emerald'] {
+  --p-400: 52 211 153;
+  --p-500: 16 185 129;
+  --p-600: 5 150 105;
+  --p-700: 4 120 87;
+  --p-900: 6 78 59;
+}
+:root[data-accent='rose'] {
+  --p-400: 251 113 133;
+  --p-500: 244 63 94;
+  --p-600: 225 29 72;
+  --p-700: 190 18 60;
+  --p-900: 136 19 55;
+}
+:root[data-accent='amber'] {
+  --p-400: 251 191 36;
+  --p-500: 245 158 11;
+  --p-600: 217 119 6;
+  --p-700: 180 83 9;
+  --p-900: 120 53 15;
+}
+
+/* Compact density tightens default tables/cards */
+:root[data-density='compact'] .data-table td { @apply py-1; }
+:root[data-density='compact'] .data-table th { @apply py-1; }
+
 /* ── Base ─────────────────────────────────────────────────────────────── */
 @layer base {
   * { @apply border-surface-4; }

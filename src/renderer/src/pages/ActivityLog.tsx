@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Activity, Search, Shield, CheckCircle, XCircle } from 'lucide-react'
+import { Activity, Search, Shield, CheckCircle, XCircle, Download } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input'
 import { Table, Column } from '../components/ui/Table'
 import { api } from '../lib/api'
 import { formatDate, timeAgo } from '../lib/format'
+import { exportCSV, exportJSON } from '../lib/export'
 
 interface ActivityRow {
   id: number; event_type: string; description: string; metadata: string | null
@@ -74,15 +75,36 @@ export default function ActivityLog(): React.JSX.Element {
           <h1 className="text-lg font-bold text-white">Activity Log</h1>
           <Badge variant="muted">{rows.length.toLocaleString()} entries</Badge>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          icon={<Shield className="w-3.5 h-3.5" />}
-          onClick={checkIntegrity}
-          loading={checkingIntegrity}
-        >
-          Verify Integrity
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Download className="w-3.5 h-3.5" />}
+            onClick={() => exportCSV(filtered as unknown as Record<string, unknown>[], 'activity-log',
+              ['id', 'event_type', 'description', 'timestamp', 'row_hash', 'prev_hash'])}
+            disabled={filtered.length === 0}
+          >
+            CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Download className="w-3.5 h-3.5" />}
+            onClick={() => exportJSON(filtered, 'activity-log')}
+            disabled={filtered.length === 0}
+          >
+            JSON
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<Shield className="w-3.5 h-3.5" />}
+            onClick={checkIntegrity}
+            loading={checkingIntegrity}
+          >
+            Verify Integrity
+          </Button>
+        </div>
       </div>
 
       {/* Integrity result */}

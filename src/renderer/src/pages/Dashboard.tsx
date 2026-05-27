@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, FileSearch, Globe, Monitor, Hash, Shield, Activity, Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { FolderKanban, FileSearch, Globe, Monitor, Hash, Shield, Activity, Clock, AlertTriangle, CheckCircle, FileText, X } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
+import { SkeletonRow, SkeletonStat } from '../components/ui/Skeleton'
 import { api } from '../lib/api'
 import { timeAgo } from '../lib/format'
 import { useCaseStore } from '../stores/caseStore'
+import { recentFiles, clearRecentFiles, type RecentFile } from '../lib/storage'
 
 const QUICK_ACTIONS = [
   { label: 'Analyze File',   icon: FileSearch, to: '/file-analyzer',   color: 'from-primary-600 to-primary-700' },
@@ -24,6 +26,14 @@ export default function Dashboard(): React.JSX.Element {
   const [activity, setActivity] = useState<{ id: number; event_type: string; description: string; timestamp: string }[]>([])
   const [hashStats, setHashStats] = useState<{ total: number; known_bad: number }>({ total: 0, known_bad: 0 })
   const [loading, setLoading] = useState(true)
+  const [recents, setRecents] = useState<RecentFile[]>([])
+
+  useEffect(() => {
+    const sync = () => setRecents(recentFiles())
+    sync()
+    window.addEventListener('artifactscope:recents-changed', sync)
+    return () => window.removeEventListener('artifactscope:recents-changed', sync)
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -60,7 +70,7 @@ export default function Dashboard(): React.JSX.Element {
 
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4">
-        {[
+        {loading ? Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />) : [
           { label: 'Open Cases',    value: openCases,          icon: FolderKanban, color: 'text-accent-400',  bg: 'bg-accent-500/10' },
           { label: 'Critical',      value: criticalCases,      icon: AlertTriangle, color: 'text-danger',     bg: 'bg-danger/10' },
           { label: 'Hash DB',       value: hashStats.total,    icon: Hash,          color: 'text-success',    bg: 'bg-success/10' },
@@ -71,7 +81,7 @@ export default function Dashboard(): React.JSX.Element {
               <s.icon className={`w-5 h-5 ${s.color}`} />
             </div>
             <div>
-              <p className="text-xl font-bold text-white">{loading ? '—' : s.value}</p>
+              <p className="text-xl font-bold text-white">{s.value}</p>
               <p className="text-xs text-muted">{s.label}</p>
             </div>
           </Card>
@@ -140,7 +150,7 @@ export default function Dashboard(): React.JSX.Element {
           </CardHeader>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {loading ? (
-              <p className="text-xs text-muted py-4 text-center">Loading…</p>
+              <div className="space-y-1">{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}</div>
             ) : activity.length === 0 ? (
               <p className="text-xs text-muted py-4 text-center">No activity yet</p>
             ) : activity.slice(0, 10).map(a => (
@@ -156,6 +166,36 @@ export default function Dashboard(): React.JSX.Element {
         </Card>
       </div>
 
+      {/* Recent Files (artifacts you've opened) */}
+      {recents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Files</CardTitle>
+            <button onClick={clearRecentFiles} className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
+              <X className="w-3 h-3" />
+              Clear
+            </button>
+          </CardHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {recents.slice(0, 6).map(r => (
+              <button
+                key={r.path}
+                onClick={() => navigate(r.page)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-3/50 border border-surface-4 hover:border-primary-600/50 hover:bg-surface-3 transition-all text-left group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary-600/15 border border-primary-600/30 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-primary-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-primary-300 transition-colors">{r.label}</p>
+                  <p className="text-[10px] text-muted">{r.kind} · {timeAgo(r.at)}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Recent Cases */}
       <Card>
         <CardHeader>
@@ -163,7 +203,7 @@ export default function Dashboard(): React.JSX.Element {
           <Button size="xs" variant="ghost" onClick={() => navigate('/cases')}>All Cases</Button>
         </CardHeader>
         {loading ? (
-          <p className="text-xs text-muted py-4 text-center">Loading…</p>
+          <div className="space-y-1">{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>
         ) : (cases as { id: string; name: string; case_number: string; investigator: string; status: string; priority: string; updated_at: string }[]).slice(0, 5).map(c => (
           <div
             key={c.id}

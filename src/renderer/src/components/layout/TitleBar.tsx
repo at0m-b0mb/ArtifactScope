@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Search, HelpCircle } from 'lucide-react'
 import { useCaseStore } from '../../stores/caseStore'
 import { api } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { useUIStore } from '../../stores/uiStore'
+import { Kbd } from '../ui/Kbd'
 
 export default function TitleBar(): React.JSX.Element {
   const [platform, setPlatform] = useState('linux')
   const [isMaximized, setIsMaximized] = useState(false)
   const { activeCase } = useCaseStore()
   const navigate = useNavigate()
+  const { setPaletteOpen, setHelpOpen } = useUIStore()
 
   useEffect(() => {
     api.window.platform().then(setPlatform)
@@ -44,7 +47,18 @@ export default function TitleBar(): React.JSX.Element {
         </div>
       )}
 
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center gap-3">
+        {/* Command palette trigger */}
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="no-drag flex items-center gap-2 px-3 py-1 h-7 rounded-lg bg-surface-3 border border-surface-4 text-xs text-muted hover:border-primary-600 hover:text-white transition-colors w-72 max-w-[40vw]"
+          title="Open command palette"
+        >
+          <Search className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="flex-1 text-left truncate">Search tools, jump anywhere…</span>
+          <Kbd keys="mod+k" size="xs" />
+        </button>
+
         {/* Active case chip */}
         {activeCase && (
           <button
@@ -60,6 +74,13 @@ export default function TitleBar(): React.JSX.Element {
 
       {/* Right controls */}
       <div className="flex items-center gap-1 px-2 no-drag">
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-md text-muted hover:text-white hover:bg-surface-3 transition-colors"
+          title="Keyboard shortcuts (?)"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
         {/* Windows/Linux window controls */}
         {!isMac && (
           <div className="flex items-center ml-2">
