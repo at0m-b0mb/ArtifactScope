@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, ArrowRight, LayoutDashboard, FolderKanban, FileSearch, Image, AlignLeft, Archive,
   Globe, Monitor, BookKey, Mail, FileText, Network, Clock3, HardDrive, Hash, FileOutput,
-  Activity, Settings, Database, HelpCircle, Sparkles,
+  Activity, Settings, Database, HelpCircle, Eye, GitCompare, Zap,
 } from 'lucide-react'
 import { useUIStore } from '../stores/uiStore'
 import { Kbd } from './ui/Kbd'
 import { cn } from '../lib/cn'
+import { setPendingFile } from '../lib/storage'
+import { addWatchItem } from '../lib/watchlist'
 
 interface Command {
   id: string
@@ -39,9 +41,17 @@ const PAGES: Array<Pick<Command, 'id' | 'label' | 'group' | 'icon' | 'hint'> & {
   { id: 'go-sqlite',     label: 'SQLite Browser',          group: 'Investigate', icon: Database,     to: '/sqlite',          keywords: 'db query' },
   { id: 'go-disk',       label: 'Disk Image',              group: 'Investigate', icon: HardDrive,    to: '/disk-image',      keywords: 'raw image partition' },
   { id: 'go-hashdb',     label: 'Hash Database',           group: 'Manage',   icon: Hash,            to: '/hash-db',         hint: 'g h', keywords: 'known good bad' },
+  { id: 'go-watchlist',  label: 'Watchlist',                group: 'Manage',   icon: Eye,             to: '/watchlist',       keywords: 'ioc indicator alert' },
+  { id: 'go-compare',    label: 'Compare Files',           group: 'Analyze',  icon: GitCompare,      to: '/compare',         keywords: 'diff two side' },
   { id: 'go-reports',    label: 'Reports',                 group: 'Manage',   icon: FileOutput,      to: '/reports',         keywords: 'pdf export' },
   { id: 'go-settings',   label: 'Settings',                group: 'Manage',   icon: Settings,        to: '/settings',        hint: 'g s', keywords: 'preferences theme' },
 ]
+
+// ── Smart input detectors ──────────────────────────────────────────────────
+const HASH_RE = /^[a-f0-9]{32}$|^[a-f0-9]{40}$|^[a-f0-9]{64}$|^[a-f0-9]{128}$/i
+const PATH_RE = /^(?:[a-zA-Z]:[\\/]|[\\/])/                     // /unix/path or C:\windows
+const IP_RE   = /^(?:\d{1,3}\.){3}\d{1,3}$/
+const DOMAIN_RE = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i
 
 function fuzzyScore(query: string, text: string): number {
   if (!query) return 1
@@ -79,23 +89,64 @@ export function CommandPalette(): React.ReactPortal | null {
       hint: '?', keywords: 'shortcuts cheatsheet keys',
       run: () => setHelpOpen(true),
     })
-    base.push({
-      id: 'whats-new', label: "What's new in ArtifactScope", group: 'Help', icon: Sparkles,
-      keywords: 'release notes changelog',
-      run: () => navigate('/settings'),
-    })
     return base
   }, [navigate, setHelpOpen])
+
+  // Smart commands generated from the query when it looks like a hash/path/ip/etc.
+  const smartCommands: Command[] = useMemo(() => {
+    const q = query.trim()
+    if (!q) return []
+    const out: Command[] = []
+    if (HASH_RE.test(q)) {
+      out.push({
+        id: 'smart-hash-lookup', group: 'Quick Action', icon: Hash,
+        label: `Look up hash in database`, keywords: q,
+        hint: 'enter',
+        run: () => navigate(`/hash-db?hash=${encodeURIComponent(q)}`),
+      })
+      out.push({
+        id: 'smart-watch-hash', group: 'Quick Action', icon: Eye,
+        label: 'Add this hash to watchlist', keywords: q,
+        run: () => { addWatchItem({ type: 'hash', value: q, label: `Hash ${q.slice(0, 8)}…`, severity: 'high' }); navigate('/watchlist') },
+      })
+    }
+    if (PATH_RE.test(q)) {
+      out.push({
+        id: 'smart-analyze-path', group: 'Quick Action', icon: Zap,
+        label: 'Analyze this file path',
+        keywords: q,
+        hint: 'enter',
+        run: () => { setPendingFile(q); navigate('/file-analyzer') },
+      })
+    }
+    if (IP_RE.test(q)) {
+      out.push({
+        id: 'smart-watch-ip', group: 'Quick Action', icon: Eye,
+        label: 'Add this IP to watchlist', keywords: q,
+        run: () => { addWatchItem({ type: 'ip', value: q, label: q, severity: 'medium' }); navigate('/watchlist') },
+      })
+    }
+    if (DOMAIN_RE.test(q)) {
+      out.push({
+        id: 'smart-watch-domain', group: 'Quick Action', icon: Eye,
+        label: 'Add this domain to watchlist', keywords: q,
+        run: () => { addWatchItem({ type: 'domain', value: q, label: q, severity: 'medium' }); navigate('/watchlist') },
+      })
+    }
+    return out
+  }, [query, navigate])
 
   const filtered = useMemo(() => {
     const q = query.trim()
     if (!q) return commands
-    return commands
+    const matched = commands
       .map(c => ({ c, s: Math.max(fuzzyScore(q, c.label), fuzzyScore(q, c.keywords ?? '') / 2) }))
       .filter(x => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map(x => x.c)
-  }, [commands, query])
+    // Smart commands always come first when present
+    return [...smartCommands, ...matched]
+  }, [commands, query, smartCommands])
 
   useEffect(() => { if (paletteOpen) setTimeout(() => inputRef.current?.focus(), 20) }, [paletteOpen])
   useEffect(() => { setIndex(0) }, [query, paletteOpen])

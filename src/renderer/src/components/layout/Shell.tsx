@@ -43,6 +43,17 @@ export default function Shell(): React.JSX.Element {
       { id: 'g-h', keys: 'g h', label: 'Hash DB',     category: 'navigate', run: () => navigate('/hash-db') },
       { id: 'g-t', keys: 'g t', label: 'Timeline',    category: 'navigate', run: () => navigate('/timeline') },
       { id: 'g-s', keys: 'g s', label: 'Settings',    category: 'navigate', run: () => navigate('/settings') },
+      { id: 'g-w', keys: 'g w', label: 'Watchlist',   category: 'navigate', run: () => navigate('/watchlist') },
+      { id: 'g-x', keys: 'g x', label: 'Compare',     category: 'navigate', run: () => navigate('/compare') },
+      {
+        id: 'focus-search', keys: '/', label: 'Focus search', category: 'general',
+        run: () => {
+          // Find any visible text input that looks like a search and focus it.
+          const candidates = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="search"], input[placeholder*="earch" i], input[placeholder*="ilter" i]'))
+          const visible = candidates.find(el => el.offsetParent !== null)
+          if (visible) { visible.focus(); visible.select() }
+        },
+      },
     ])
   }, [navigate, togglePalette, toggleHelp, paletteOpen, helpOpen, setPaletteOpen])
 

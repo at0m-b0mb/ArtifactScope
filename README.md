@@ -31,14 +31,18 @@ Inspect files, recover artifacts, hunt indicators, and document chain of custody
 
 ## ✨ Highlights
 
-- **🎯 Command palette** — `⌘K` / `Ctrl+K` opens fuzzy search over every tool, case, and action.
-- **⌨️ Keyboard-first** — Vim-style `g d` / `g c` / `g f` shortcuts; `?` reveals the full cheatsheet + changelog.
+- **🎯 Command palette** — `⌘K` / `Ctrl+K` opens fuzzy search; **paste a hash or path and it offers an instant action**.
+- **⌨️ Keyboard-first** — Vim-style `g d` / `g c` / `g f` / `g w` / `g x` shortcuts; `?` reveals the full cheatsheet + changelog; `/` focuses the on-page search.
 - **📥 Drop-anywhere** — drag any file onto the window and it opens in File Analyzer automatically.
+- **👁️ Watchlist** — track hashes, IPs, domains, URLs, or regex patterns. **Auto-alerts fire whenever a match shows up in any analysis.**
+- **🧪 Case templates** — start a new case from Phishing / Malware / Insider / Fraud / Breach presets.
+- **🔬 Compare two files** — side-by-side diff of hashes, magic, size, entropy, and timestamps.
+- **📊 Activity heatmap** — GitHub-style 35-day investigation activity calendar on the dashboard.
 - **⭐ Pin your tools** — star any tool to lock it to the top of the sidebar.
 - **📝 Per-case notes** — auto-saving notepad alongside each investigation.
 - **🔗 Tamper-evident audit log** — every action is hash-chained; integrity verifies in one click.
 - **🗂️ Case workflow** — evidence, chain of custody, activity, and notes bound together per investigation.
-- **🔬 19 forensic analyzers** — files, images, logs, PCAPs, registries, email, archives, SQLite, disk images, and more.
+- **🔬 20+ forensic analyzers** — files, images, logs, PCAPs, registries, email, archives, SQLite, disk images, comparison, and more.
 - **🧬 Hash database** — local known-good / known-bad / suspicious lookup, NSRL-compatible import, **batch lookup with results table + CSV export**.
 - **📤 One-click export** — CSV / JSON exporters on every data view.
 - **🎨 Polished UI** — Tailwind + Framer Motion, accent picker, cozy/compact density, loading skeletons, animated page transitions.
@@ -142,7 +146,12 @@ Press <kbd>?</kbd> anytime for the full cheat-sheet. Highlights:
 | <kbd>g</kbd> <kbd>h</kbd> | Hash database |
 | <kbd>g</kbd> <kbd>t</kbd> | Timeline |
 | <kbd>g</kbd> <kbd>s</kbd> | Settings |
+| <kbd>g</kbd> <kbd>w</kbd> | Watchlist |
+| <kbd>g</kbd> <kbd>x</kbd> | Compare files |
+| <kbd>/</kbd> | Focus on-page search / filter |
 | Drop a file | Opens it in File Analyzer |
+| Paste a hash in ⌘K | Quick hash-DB lookup or add to watchlist |
+| Paste a path in ⌘K | Instantly analyze that file |
 | ⭐ Click star icon | Pin / unpin a tool to the sidebar top |
 
 ---

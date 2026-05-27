@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FolderKanban, FileSearch, Image, AlignLeft, Archive,
   Globe, Monitor, BookKey, Mail, FileText, Network, Clock3,
   HardDrive, Hash, FileOutput, Activity, Settings, ChevronDown, ChevronRight,
-  Shield, Star, Pin
+  Shield, Star, Pin, Eye, GitCompare
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { getPins, togglePin, getSidebarCollapsed, setSidebarCollapsed } from '../../lib/storage'
@@ -45,6 +45,7 @@ const sections: NavSection[] = [
       { to: '/image-forensics', icon: Image,      label: 'Image Forensics' },
       { to: '/strings',         icon: AlignLeft,  label: 'Strings / IOC' },
       { to: '/archive',         icon: Archive,    label: 'Archive Analyzer' },
+      { to: '/compare',         icon: GitCompare, label: 'Compare Files' },
     ],
   },
   {
@@ -69,9 +70,10 @@ const sections: NavSection[] = [
   {
     title: 'Manage',
     items: [
-      { to: '/hash-db',  icon: Hash,       label: 'Hash Database' },
-      { to: '/reports',  icon: FileOutput, label: 'Reports' },
-      { to: '/settings', icon: Settings,   label: 'Settings' },
+      { to: '/hash-db',   icon: Hash,       label: 'Hash Database' },
+      { to: '/watchlist', icon: Eye,        label: 'Watchlist' },
+      { to: '/reports',   icon: FileOutput, label: 'Reports' },
+      { to: '/settings',  icon: Settings,   label: 'Settings' },
     ],
   },
 ]

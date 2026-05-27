@@ -21,6 +21,8 @@ const DiskImage       = lazy(() => import('./pages/DiskImageAnalyzer'))
 const Reports         = lazy(() => import('./pages/Reports'))
 const ActivityLog     = lazy(() => import('./pages/ActivityLog'))
 const Settings        = lazy(() => import('./pages/Settings'))
+const Watchlist       = lazy(() => import('./pages/Watchlist'))
+const FileCompare     = lazy(() => import('./pages/FileCompare'))
 
 function PageLoader(): React.JSX.Element {
   return (
@@ -52,6 +54,8 @@ export default function AppRouter(): React.JSX.Element {
         <Route path="/sqlite"            element={<SQLiteBrowser />} />
         <Route path="/disk-image"        element={<DiskImage />} />
         <Route path="/hash-db"           element={<HashDB />} />
+        <Route path="/watchlist"         element={<Watchlist />} />
+        <Route path="/compare"           element={<FileCompare />} />
         <Route path="/reports"           element={<Reports />} />
         <Route path="/activity"          element={<ActivityLog />} />
         <Route path="/settings"          element={<Settings />} />

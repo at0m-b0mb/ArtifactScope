@@ -13,6 +13,8 @@ import { formatBytes, formatDate, entropyLabel } from '../lib/format'
 import { useToast } from '../components/ui/Toast'
 import { pushRecentFile, consumePendingFile } from '../lib/storage'
 import { exportJSON } from '../lib/export'
+import { checkWatchlist, type WatchMatch } from '../lib/watchlist'
+import { WatchlistBanner } from '../components/WatchlistBanner'
 
 interface FileResult {
   path: string; name: string; extension: string; size: number
@@ -47,6 +49,7 @@ export default function FileAnalyzer(): React.JSX.Element {
   const [loading, setLoading] = useState(false)
   const [stringSearch, setStringSearch] = useState('')
   const [hashLookup, setHashLookup] = useState<string | null>(null)
+  const [watchHits, setWatchHits] = useState<WatchMatch[]>([])
 
   // Auto-consume a pending file (from global drop or palette hand-off).
   useEffect(() => {
@@ -66,6 +69,14 @@ export default function FileAnalyzer(): React.JSX.Element {
     const fr = r.data as FileResult
     setResult(fr)
     pushRecentFile({ path: fr.path, label: fr.name, kind: fr.magic.type || 'file', page: '/file-analyzer' })
+
+    // Watchlist match — hashes and any extracted string-like content
+    const stringsText = fr.strings.slice(0, 2000).map(s => s.value).join('\n')
+    const hits = checkWatchlist({
+      hashes: [fr.hashes.md5, fr.hashes.sha1, fr.hashes.sha256, fr.hashes.sha512].filter(Boolean),
+      text: [stringsText, fr.preview_text ?? '', fr.path].join('\n'),
+    })
+    setWatchHits(hits)
 
     // Check hash DB
     if (r.data) {
@@ -105,6 +116,8 @@ export default function FileAnalyzer(): React.JSX.Element {
           <Progress value={0} className="w-48" />
         </Card>
       )}
+
+      {result && watchHits.length > 0 && <WatchlistBanner matches={watchHits} />}
 
       {result && (
         <>

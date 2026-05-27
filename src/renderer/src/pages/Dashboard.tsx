@@ -9,6 +9,7 @@ import { api } from '../lib/api'
 import { timeAgo } from '../lib/format'
 import { useCaseStore } from '../stores/caseStore'
 import { recentFiles, clearRecentFiles, type RecentFile } from '../lib/storage'
+import { ActivityHeatmap } from '../components/ActivityHeatmap'
 
 const QUICK_ACTIONS = [
   { label: 'Analyze File',   icon: FileSearch, to: '/file-analyzer',   color: 'from-primary-600 to-primary-700' },
@@ -38,7 +39,7 @@ export default function Dashboard(): React.JSX.Element {
   useEffect(() => {
     Promise.all([
       api.cases.list(),
-      api.activity.list(20),
+      api.activity.list(500),
       api.hashdb.stats(),
     ]).then(([c, a, h]) => {
       setCases((c.data as unknown[]) ?? [])
@@ -165,6 +166,17 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         </Card>
       </div>
+
+      {/* Activity heatmap */}
+      {!loading && activity.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Investigation Activity</CardTitle>
+            <span className="text-[10px] text-muted">last 5 weeks</span>
+          </CardHeader>
+          <ActivityHeatmap activities={activity} days={35} />
+        </Card>
+      )}
 
       {/* Recent Files (artifacts you've opened) */}
       {recents.length > 0 && (

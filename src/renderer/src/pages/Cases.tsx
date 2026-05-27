@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, Plus, Search, Trash2 } from 'lucide-react'
+import { FolderKanban, Plus, Search, Trash2, Sparkles, Fish, Bug, Lock, ShieldAlert, Banknote } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge, statusBadge } from '../components/ui/Badge'
@@ -19,6 +19,86 @@ interface CreateForm {
 
 const EMPTY_FORM: CreateForm = { name: '', case_number: '', investigator: '', agency: '', status: 'open', priority: 'medium', description: '', tags: '' }
 
+interface CaseTemplate {
+  id: string
+  name: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  accent: string
+  defaults: Partial<CreateForm>
+}
+
+const TEMPLATES: CaseTemplate[] = [
+  {
+    id: 'blank',
+    name: 'Blank',
+    description: 'Start from scratch — empty case form.',
+    icon: Sparkles,
+    accent: 'text-muted',
+    defaults: {},
+  },
+  {
+    id: 'phishing',
+    name: 'Phishing Investigation',
+    description: 'Email-borne attack. Pre-tagged for header analysis and URL hunting.',
+    icon: Fish,
+    accent: 'text-accent-400',
+    defaults: {
+      priority: 'high',
+      tags: 'phishing, email, social-engineering',
+      description: 'Suspected phishing campaign. Collect message headers, attachments, URLs, and recipient impact.',
+    },
+  },
+  {
+    id: 'malware',
+    name: 'Malware Triage',
+    description: 'Sample analysis — strings, IOCs, persistence, network indicators.',
+    icon: Bug,
+    accent: 'text-danger',
+    defaults: {
+      priority: 'critical',
+      tags: 'malware, sample-analysis, ioc',
+      description: 'Malware sample triage — static analysis, hash lookup, network/IOC extraction, sandbox notes.',
+    },
+  },
+  {
+    id: 'insider',
+    name: 'Insider Threat',
+    description: 'Internal user activity, data exfiltration, policy violations.',
+    icon: ShieldAlert,
+    accent: 'text-warning',
+    defaults: {
+      priority: 'high',
+      tags: 'insider, exfiltration, hr',
+      description: 'Insider threat investigation — collect user system snapshots, file access timelines, and removable media activity.',
+    },
+  },
+  {
+    id: 'fraud',
+    name: 'Financial Fraud',
+    description: 'Transaction trails, account compromise, BEC.',
+    icon: Banknote,
+    accent: 'text-success',
+    defaults: {
+      priority: 'high',
+      tags: 'fraud, financial, bec',
+      description: 'Financial fraud / business email compromise — collect mail logs, transaction trails, and forwarding rules.',
+    },
+  },
+  {
+    id: 'breach',
+    name: 'Data Breach',
+    description: 'Intrusion response, scope assessment, evidence preservation.',
+    icon: Lock,
+    accent: 'text-primary-400',
+    defaults: {
+      priority: 'critical',
+      tags: 'breach, ir, ransomware',
+      description: 'Data breach / intrusion response — preserve disk + memory, build timeline, identify lateral movement.',
+    },
+  },
+]
+
 export default function Cases(): React.JSX.Element {
   const navigate = useNavigate()
   const { setActiveCase } = useCaseStore()
@@ -29,6 +109,19 @@ export default function Cases(): React.JSX.Element {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM)
   const [creating, setCreating] = useState(false)
+  const [template, setTemplate] = useState<string>('blank')
+
+  function applyTemplate(id: string) {
+    setTemplate(id)
+    const t = TEMPLATES.find(t => t.id === id) ?? TEMPLATES[0]
+    setForm(p => ({ ...EMPTY_FORM, ...t.defaults, name: p.name, case_number: p.case_number, investigator: p.investigator, agency: p.agency }))
+  }
+
+  function openCreate() {
+    setForm(EMPTY_FORM)
+    setTemplate('blank')
+    setShowCreate(true)
+  }
 
   function load() {
     api.cases.list().then(r => setCases((r.data ?? []) as Case[]))
@@ -74,7 +167,7 @@ export default function Cases(): React.JSX.Element {
           <h1 className="text-lg font-bold text-white">Cases</h1>
           <p className="text-xs text-muted">{cases.length} total · {cases.filter(c => c.status === 'open').length} open</p>
         </div>
-        <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>
+        <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={openCreate}>
           New Case
         </Button>
       </div>
@@ -95,7 +188,7 @@ export default function Cases(): React.JSX.Element {
           icon={<FolderKanban className="w-7 h-7" />}
           title={search ? 'No matching cases' : 'No cases yet'}
           description={search ? 'Try a different search.' : 'Create your first investigation case to get started.'}
-          action={!search && <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => setShowCreate(true)}>New Case</Button>}
+          action={!search && <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={openCreate}>New Case</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -144,7 +237,36 @@ export default function Cases(): React.JSX.Element {
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onClose={() => setShowCreate(false)} title="New Investigation Case" size="lg">
-        <form onSubmit={handleCreate} className="space-y-3">
+        <form onSubmit={handleCreate} className="space-y-4">
+          {/* Template picker */}
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Start from a template</p>
+            <div className="grid grid-cols-3 gap-2">
+              {TEMPLATES.map(t => {
+                const Icon = t.icon
+                const active = template === t.id
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => applyTemplate(t.id)}
+                    className={`flex items-start gap-2 p-2.5 rounded-lg border text-left transition-all ${
+                      active
+                        ? 'border-primary-600 bg-primary-600/10'
+                        : 'border-surface-4 bg-surface-3/40 hover:border-surface-4 hover:bg-surface-3'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${active ? 'text-primary-400' : t.accent}`} />
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold ${active ? 'text-white' : 'text-gray-200'}`}>{t.name}</p>
+                      <p className="text-[10px] text-muted leading-snug mt-0.5">{t.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Input label="Case Name *" value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="Operation Thunder" required />
             <Input label="Case Number *" value={form.case_number} onChange={e => setForm(p => ({...p, case_number: e.target.value}))} placeholder="2025-001" required />
