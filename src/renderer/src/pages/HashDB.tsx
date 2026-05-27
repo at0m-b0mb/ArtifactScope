@@ -37,6 +37,8 @@ export default function HashDB(): React.JSX.Element {
   const [importing, setImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const [batchText, setBatchText] = useState('')
+  const [batchRunning, setBatchRunning] = useState(false)
+  const [batchResults, setBatchResults] = useState<{ hash: string; classification: string; row: HashRow | null }[]>([])
 
   function load() {
     api.hashdb.list().then(r => setHashes((r.data ?? []) as HashRow[]))
@@ -86,15 +88,24 @@ export default function HashDB(): React.JSX.Element {
   }
 
   async function handleBatchLookup() {
-    const lines = batchText.split('\n').map(l => l.trim()).filter(Boolean)
+    const lines = Array.from(new Set(batchText.split(/[\s,;]+/).map(l => l.trim()).filter(Boolean)))
     if (lines.length === 0) return
-    const results: string[] = []
+    setBatchRunning(true)
+    setBatchResults([])
+    const out: { hash: string; classification: string; row: HashRow | null }[] = []
     for (const h of lines) {
       const r = await api.hashdb.lookup(h)
-      const cls = (r.data as HashRow)?.classification ?? 'not found'
-      results.push(`${h} → ${cls}`)
+      const row = (r.data as HashRow | null) ?? null
+      out.push({ hash: h, classification: row?.classification ?? 'not_found', row })
+      setBatchResults([...out])
     }
-    alert(results.join('\n'))
+    setBatchRunning(false)
+  }
+
+  function batchSummary() {
+    const counts: Record<string, number> = {}
+    for (const r of batchResults) counts[r.classification] = (counts[r.classification] ?? 0) + 1
+    return counts
   }
 
   const filtered = hashes.filter(h => {
@@ -281,10 +292,61 @@ export default function HashDB(): React.JSX.Element {
               </div>
             )
           )}
-          <div className="border-t border-surface-4 pt-3">
-            <p className="text-xs text-muted mb-2">Batch Lookup (one hash per line):</p>
+          <div className="border-t border-surface-4 pt-3 space-y-2">
+            <p className="text-xs text-muted">Batch Lookup — paste hashes separated by newlines, commas, or spaces:</p>
             <Textarea value={batchText} onChange={e => setBatchText(e.target.value)} rows={4} placeholder="paste hashes here…" />
-            <Button size="sm" variant="outline" className="mt-2" onClick={handleBatchLookup}>Run Batch Lookup</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" loading={batchRunning} onClick={handleBatchLookup} disabled={!batchText.trim()}>
+                Run Batch Lookup
+              </Button>
+              {batchResults.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => exportCSV(
+                    batchResults.map(r => ({ hash: r.hash, classification: r.classification, filename: r.row?.filename ?? '', notes: r.row?.notes ?? '' })) as Record<string, unknown>[],
+                    'hash-batch-lookup',
+                    ['hash', 'classification', 'filename', 'notes']
+                  )}
+                >
+                  Export CSV
+                </Button>
+              )}
+              {batchResults.length > 0 && (
+                <span className="text-[10px] text-muted ml-auto">
+                  {Object.entries(batchSummary()).map(([k, v]) => `${v} ${k.replace('_', ' ')}`).join(' · ')}
+                </span>
+              )}
+            </div>
+            {batchResults.length > 0 && (
+              <div className="max-h-56 overflow-auto rounded-lg border border-surface-4">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-surface-2 text-muted">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-medium">Hash</th>
+                      <th className="px-2 py-1.5 text-left font-medium w-32">Classification</th>
+                      <th className="px-2 py-1.5 text-left font-medium">Filename</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchResults.map((r, i) => {
+                      const cfg = CLS_CONFIG[r.classification]
+                      return (
+                        <tr key={i} className="hover:bg-surface-3 transition-colors border-t border-surface-4">
+                          <td className="px-2 py-1 font-mono text-[10px] text-white break-all">{r.hash}</td>
+                          <td className="px-2 py-1">
+                            {cfg
+                              ? <Badge variant={cfg.variant} dot>{cfg.label}</Badge>
+                              : <span className="text-[10px] text-muted">Not in DB</span>}
+                          </td>
+                          <td className="px-2 py-1 text-muted truncate max-w-[120px]">{r.row?.filename || '—'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </Dialog>

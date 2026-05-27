@@ -32,11 +32,14 @@ Inspect files, recover artifacts, hunt indicators, and document chain of custody
 ## ✨ Highlights
 
 - **🎯 Command palette** — `⌘K` / `Ctrl+K` opens fuzzy search over every tool, case, and action.
-- **⌨️ Keyboard-first** — Vim-style `g d` / `g c` / `g f` shortcuts; `?` reveals the full cheatsheet.
+- **⌨️ Keyboard-first** — Vim-style `g d` / `g c` / `g f` shortcuts; `?` reveals the full cheatsheet + changelog.
+- **📥 Drop-anywhere** — drag any file onto the window and it opens in File Analyzer automatically.
+- **⭐ Pin your tools** — star any tool to lock it to the top of the sidebar.
+- **📝 Per-case notes** — auto-saving notepad alongside each investigation.
 - **🔗 Tamper-evident audit log** — every action is hash-chained; integrity verifies in one click.
-- **🗂️ Case workflow** — evidence, chain of custody, and activity bound together per investigation.
+- **🗂️ Case workflow** — evidence, chain of custody, activity, and notes bound together per investigation.
 - **🔬 19 forensic analyzers** — files, images, logs, PCAPs, registries, email, archives, SQLite, disk images, and more.
-- **🧬 Hash database** — local known-good / known-bad / suspicious lookup, NSRL-compatible import.
+- **🧬 Hash database** — local known-good / known-bad / suspicious lookup, NSRL-compatible import, **batch lookup with results table + CSV export**.
 - **📤 One-click export** — CSV / JSON exporters on every data view.
 - **🎨 Polished UI** — Tailwind + Framer Motion, accent picker, cozy/compact density, loading skeletons, animated page transitions.
 - **🛡️ Local-first & private** — no telemetry; databases live in your user-data directory; no network calls unless you wire up an API key.
@@ -139,6 +142,8 @@ Press <kbd>?</kbd> anytime for the full cheat-sheet. Highlights:
 | <kbd>g</kbd> <kbd>h</kbd> | Hash database |
 | <kbd>g</kbd> <kbd>t</kbd> | Timeline |
 | <kbd>g</kbd> <kbd>s</kbd> | Settings |
+| Drop a file | Opens it in File Analyzer |
+| ⭐ Click star icon | Pin / unpin a tool to the sidebar top |
 
 ---
 

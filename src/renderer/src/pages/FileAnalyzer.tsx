@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FileSearch, Copy, CheckCircle, AlertTriangle, Download } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -11,7 +11,7 @@ import { HexView } from '../components/ui/HexView'
 import { api } from '../lib/api'
 import { formatBytes, formatDate, entropyLabel } from '../lib/format'
 import { useToast } from '../components/ui/Toast'
-import { pushRecentFile } from '../lib/storage'
+import { pushRecentFile, consumePendingFile } from '../lib/storage'
 import { exportJSON } from '../lib/export'
 
 interface FileResult {
@@ -47,6 +47,13 @@ export default function FileAnalyzer(): React.JSX.Element {
   const [loading, setLoading] = useState(false)
   const [stringSearch, setStringSearch] = useState('')
   const [hashLookup, setHashLookup] = useState<string | null>(null)
+
+  // Auto-consume a pending file (from global drop or palette hand-off).
+  useEffect(() => {
+    const pending = consumePendingFile()
+    if (pending) handleFiles([pending])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleFiles(paths: string[]) {
     const path = paths[0]

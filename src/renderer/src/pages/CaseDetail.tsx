@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { FolderKanban, Plus, FileText, Shield, ArrowLeft } from 'lucide-react'
+import { FolderKanban, Plus, FileText, Shield, ArrowLeft, StickyNote, Check } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge, statusBadge } from '../components/ui/Badge'
@@ -12,6 +12,7 @@ import { api } from '../lib/api'
 import { formatDate, formatBytes } from '../lib/format'
 import { useCaseStore, Case } from '../stores/caseStore'
 import { useToast } from '../components/ui/Toast'
+import { getCaseNotes, setCaseNotes } from '../lib/storage'
 
 interface EvidenceRow { id: string; name: string; type: string; source_path: string; md5: string; sha256: string; size_bytes: number; notes: string; added_at: string; added_by: string }
 interface CustodyRow { id: number; action: string; actor: string; description: string; timestamp: string; row_hash: string; prev_hash: string }
@@ -27,6 +28,22 @@ export default function CaseDetail(): React.JSX.Element {
   const [showAddEvidence, setShowAddEvidence] = useState(false)
   const [showCustody, setShowCustody] = useState(false)
   const [addForm, setAddForm] = useState({ name: '', type: 'file', source_path: '', sha256: '', md5: '', size_bytes: 0, notes: '' })
+  const [notes, setNotes] = useState('')
+  const [notesSaved, setNotesSaved] = useState(false)
+
+  // Load notes when case changes
+  useEffect(() => { if (id) setNotes(getCaseNotes(id)) }, [id])
+
+  // Auto-save (debounced) when notes change
+  useEffect(() => {
+    if (!id) return
+    const handle = window.setTimeout(() => {
+      setCaseNotes(id, notes)
+      setNotesSaved(true)
+      window.setTimeout(() => setNotesSaved(false), 1500)
+    }, 500)
+    return () => window.clearTimeout(handle)
+  }, [id, notes])
 
   function load() {
     if (!id) return
@@ -101,14 +118,37 @@ export default function CaseDetail(): React.JSX.Element {
         ]} columns={3} />
       </Card>
 
-      {/* Evidence */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Evidence ({evidence.length})</CardTitle>
-          <Button size="xs" variant="outline" icon={<Plus className="w-3 h-3" />} onClick={() => setShowAddEvidence(true)}>Add</Button>
-        </CardHeader>
-        <Table columns={evCols} data={evidence as unknown as Record<string, unknown>[]} rowKey="id" emptyMessage="No evidence added yet" />
-      </Card>
+      <div className="grid grid-cols-3 gap-4">
+        {/* Evidence (spans 2 cols) */}
+        <Card className="col-span-2">
+          <CardHeader>
+            <CardTitle>Evidence ({evidence.length})</CardTitle>
+            <Button size="xs" variant="outline" icon={<Plus className="w-3 h-3" />} onClick={() => setShowAddEvidence(true)}>Add</Button>
+          </CardHeader>
+          <Table columns={evCols} data={evidence as unknown as Record<string, unknown>[]} rowKey="id" emptyMessage="No evidence added yet" />
+        </Card>
+
+        {/* Investigator notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-1.5">
+              <StickyNote className="w-3.5 h-3.5 text-warning" />
+              Notes
+            </CardTitle>
+            <span className={`flex items-center gap-1 text-[10px] transition-opacity ${notesSaved ? 'opacity-100 text-success' : 'opacity-0'}`}>
+              <Check className="w-3 h-3" /> Saved
+            </span>
+          </CardHeader>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Investigator notes (markdown supported)…  ⌘ Saved locally per case."
+            className="w-full h-52 bg-surface-3/40 border border-surface-4 rounded-lg p-3 text-xs text-white placeholder:text-muted font-mono leading-relaxed resize-none focus:outline-none focus:border-warning/60 transition-colors"
+            data-no-global-drop="true"
+          />
+          <p className="text-[10px] text-muted mt-1.5">Stored locally per-case in your browser storage. Use the report tool for finalized writeups.</p>
+        </Card>
+      </div>
 
       {/* Add Evidence Dialog */}
       <Dialog open={showAddEvidence} onClose={() => setShowAddEvidence(false)} title="Add Evidence" size="lg">

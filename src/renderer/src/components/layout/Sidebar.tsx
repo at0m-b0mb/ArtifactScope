@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, FileSearch, Image, AlignLeft, Archive,
   Globe, Monitor, BookKey, Mail, FileText, Network, Clock3,
   HardDrive, Hash, FileOutput, Activity, Settings, ChevronDown, ChevronRight,
-  Shield
+  Shield, Star, Pin
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { getPins, togglePin, getSidebarCollapsed, setSidebarCollapsed } from '../../lib/storage'
 
 interface NavItem {
   to: string
@@ -75,38 +76,71 @@ const sections: NavSection[] = [
   },
 ]
 
-function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }): React.JSX.Element {
+const ALL_ITEMS: NavItem[] = sections.flatMap(s => s.items)
+
+function NavRow({ item, collapsed, pinned, onTogglePin }: { item: NavItem; collapsed: boolean; pinned: boolean; onTogglePin: (route: string) => void }): React.JSX.Element {
   return (
-    <NavLink
-      to={item.to}
-      title={collapsed ? item.label : undefined}
-      className={({ isActive }) =>
-        cn(
-          'relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150',
-          'hover:bg-surface-3 hover:text-white',
-          isActive
-            ? 'bg-primary-600/20 text-primary-400 font-medium'
-            : 'text-muted',
-          collapsed && 'justify-center px-2'
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {isActive && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-r" />
+    <div className="relative group/row">
+      <NavLink
+        to={item.to}
+        title={collapsed ? item.label : undefined}
+        className={({ isActive }) =>
+          cn(
+            'relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150',
+            'hover:bg-surface-3 hover:text-white',
+            isActive
+              ? 'bg-primary-600/20 text-primary-400 font-medium'
+              : 'text-muted',
+            collapsed && 'justify-center px-2'
+          )
+        }
+      >
+        {({ isActive }) => (
+          <>
+            {isActive && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-r" />
+            )}
+            <item.icon className={cn('flex-shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
+            {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+          </>
+        )}
+      </NavLink>
+      {!collapsed && (
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePin(item.to) }}
+          title={pinned ? 'Unpin' : 'Pin to top'}
+          className={cn(
+            'absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded transition-opacity',
+            pinned
+              ? 'opacity-100 text-warning'
+              : 'opacity-0 group-hover/row:opacity-100 text-muted hover:text-white'
           )}
-          <item.icon className={cn('flex-shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
-          {!collapsed && <span className="truncate">{item.label}</span>}
-        </>
+        >
+          <Star className={cn('w-3 h-3', pinned && 'fill-warning')} />
+        </button>
       )}
-    </NavLink>
+    </div>
   )
 }
 
 export default function Sidebar(): React.JSX.Element {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsedState] = useState(getSidebarCollapsed)
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const [pins, setPins] = useState<string[]>(getPins)
+
+  // Sync collapse to localStorage
+  useEffect(() => { setSidebarCollapsed(collapsed) }, [collapsed])
+
+  // Listen for pin changes from other components
+  useEffect(() => {
+    const sync = () => setPins(getPins())
+    window.addEventListener('artifactscope:pins-changed', sync)
+    return () => window.removeEventListener('artifactscope:pins-changed', sync)
+  }, [])
+
+  function handleTogglePin(route: string) {
+    setPins(togglePin(route))
+  }
 
   function toggleSection(title: string) {
     setCollapsedSections(prev => {
@@ -116,6 +150,10 @@ export default function Sidebar(): React.JSX.Element {
       return next
     })
   }
+
+  const pinnedItems = pins
+    .map(p => ALL_ITEMS.find(i => i.to === p))
+    .filter((i): i is NavItem => Boolean(i))
 
   return (
     <aside
@@ -135,7 +173,7 @@ export default function Sidebar(): React.JSX.Element {
           </span>
         )}
         <button
-          onClick={() => setCollapsed(p => !p)}
+          onClick={() => setCollapsedState(p => !p)}
           className="p-1.5 rounded text-muted hover:text-white hover:bg-surface-3 transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -145,6 +183,30 @@ export default function Sidebar(): React.JSX.Element {
 
       {/* Nav sections */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 space-y-1 px-1.5">
+        {/* Pinned section (always at top when there are pins) */}
+        {pinnedItems.length > 0 && (
+          <div>
+            {!collapsed && (
+              <div className="flex items-center gap-1.5 px-2 py-1 mt-1 mb-0.5">
+                <Pin className="w-3 h-3 text-warning" />
+                <span className="section-title !mb-0 !text-warning/80">Pinned</span>
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {pinnedItems.map((item) => (
+                <NavRow
+                  key={`pin-${item.to}`}
+                  item={item}
+                  collapsed={collapsed}
+                  pinned
+                  onTogglePin={handleTogglePin}
+                />
+              ))}
+            </div>
+            {!collapsed && <div className="mx-2 my-2 border-t border-surface-4" />}
+          </div>
+        )}
+
         {sections.map((section) => {
           const isSectionCollapsed = collapsedSections.has(section.title)
           return (
@@ -164,7 +226,13 @@ export default function Sidebar(): React.JSX.Element {
               {!isSectionCollapsed && (
                 <div className="space-y-0.5">
                   {section.items.map((item) => (
-                    <NavItem key={item.to} item={item} collapsed={collapsed} />
+                    <NavRow
+                      key={item.to}
+                      item={item}
+                      collapsed={collapsed}
+                      pinned={pins.includes(item.to)}
+                      onTogglePin={handleTogglePin}
+                    />
                   ))}
                 </div>
               )}

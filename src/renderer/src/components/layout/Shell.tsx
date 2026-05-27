@@ -10,6 +10,7 @@ import { attachShortcuts } from '../../lib/shortcuts'
 import { CommandPalette } from '../CommandPalette'
 import { ShortcutsHelp } from '../ShortcutsHelp'
 import { WelcomeModal } from '../WelcomeModal'
+import { GlobalFileDrop } from '../GlobalFileDrop'
 import { applyAccent, getAccent, getDensity, pushRecentPage } from '../../lib/storage'
 
 export default function Shell(): React.JSX.Element {
@@ -69,6 +70,7 @@ export default function Shell(): React.JSX.Element {
       <CommandPalette />
       <ShortcutsHelp />
       <WelcomeModal />
+      <GlobalFileDrop />
     </div>
   )
 }

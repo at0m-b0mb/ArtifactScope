@@ -97,3 +97,42 @@ export function setDensity(d: Density): void {
   writeLS(DENSITY_KEY, d)
   document.documentElement.dataset.density = d
 }
+
+// ── Pinned tools (sidebar favorites) ───────────────────────────────────────
+const PINS_KEY = 'pinned-tools'
+export function getPins(): string[] { return readLS<string[]>(PINS_KEY, []) }
+export function togglePin(route: string): string[] {
+  const list = getPins()
+  const next = list.includes(route) ? list.filter(r => r !== route) : [...list, route]
+  writeLS(PINS_KEY, next)
+  window.dispatchEvent(new CustomEvent('artifactscope:pins-changed'))
+  return next
+}
+export function isPinned(route: string): boolean { return getPins().includes(route) }
+
+// ── Sidebar collapsed state ────────────────────────────────────────────────
+const SIDEBAR_KEY = 'sidebar-collapsed'
+export function getSidebarCollapsed(): boolean { return readLS<boolean>(SIDEBAR_KEY, false) }
+export function setSidebarCollapsed(v: boolean): void { writeLS(SIDEBAR_KEY, v) }
+
+// ── Case notes (per-case markdown-ish notepad) ─────────────────────────────
+const NOTES_KEY = 'case-notes'
+type NotesMap = Record<string, string>
+export function getCaseNotes(caseId: string): string {
+  return (readLS<NotesMap>(NOTES_KEY, {})[caseId]) ?? ''
+}
+export function setCaseNotes(caseId: string, body: string): void {
+  const map = readLS<NotesMap>(NOTES_KEY, {})
+  if (body.trim() === '') delete map[caseId]
+  else map[caseId] = body
+  writeLS(NOTES_KEY, map)
+}
+
+// ── Pending file (from global drop or palette → File Analyzer hand-off) ────
+const PENDING_FILE_KEY = 'pending-file'
+export function setPendingFile(path: string): void { writeLS(PENDING_FILE_KEY, path) }
+export function consumePendingFile(): string | null {
+  const v = readLS<string | null>(PENDING_FILE_KEY, null)
+  if (v) removeLS(PENDING_FILE_KEY)
+  return v
+}

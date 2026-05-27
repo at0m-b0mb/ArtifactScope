@@ -39,6 +39,7 @@ export function DropZone({ onFiles, accept, multiple = false, directory = false,
 
   return (
     <button
+      data-dropzone="true"
       onClick={handleClick}
       onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
