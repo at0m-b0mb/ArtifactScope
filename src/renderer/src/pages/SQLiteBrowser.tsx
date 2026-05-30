@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-import { Database, FolderOpen, Play, Table2 } from 'lucide-react'
+import { Database, FolderOpen, Play, Table2, Download, RotateCcw } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
+import { DropZone } from '../components/ui/DropZone'
 import { Spinner } from '../components/ui/Progress'
 import { EmptyState } from '../components/ui/EmptyState'
 import { api } from '../lib/api'
+import { exportCSV } from '../lib/export'
+import { pushRecentFile } from '../lib/storage'
 
 interface DBInfo {
   tables: { name: string; type: string; row_count: number; columns: { name: string; type: string; pk: number; notnull: number }[] }[]
@@ -37,17 +40,34 @@ export default function SQLiteBrowser(): React.JSX.Element {
     if (r.data) setFilePath(r.data as string)
   }
 
-  async function open() {
-    if (!filePath) return
+  async function open(overridePath?: string) {
+    const target = overridePath || filePath
+    if (!target) return
+    if (overridePath) setFilePath(overridePath)
     setLoading(true)
     setDbInfo(null)
     setSelectedTable(null)
     setQueryResult(null)
-    const r = await api.sqlite.browse(filePath)
+    const r = await api.sqlite.browse(target)
     setLoading(false)
     if (r.data) {
       setDbInfo(r.data as DBInfo)
+      const name = target.split(/[/\\]/).pop() || 'database'
+      pushRecentFile({ path: target, label: name, kind: 'sqlite', page: '/sqlite' })
     }
+  }
+
+  function handleDrop(paths: string[]) {
+    if (paths[0]) open(paths[0])
+  }
+
+  function reset() {
+    setDbInfo(null)
+    setFilePath('')
+    setSelectedTable(null)
+    setQuery('')
+    setQueryResult(null)
+    setQueryError(null)
   }
 
   async function selectTable(name: string) {
@@ -77,25 +97,45 @@ export default function SQLiteBrowser(): React.JSX.Element {
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <Database className="w-5 h-5 text-primary-400" />
-        <h1 className="text-lg font-bold text-white">SQLite Browser</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Database className="w-5 h-5 text-primary-400" />
+          <h1 className="text-lg font-bold text-white">SQLite Browser</h1>
+        </div>
+        {dbInfo && (
+          <div className="flex gap-2">
+            {queryResult && (
+              <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => {
+                  const rows = queryResult.rows.map(r => {
+                    const obj: Record<string, unknown> = {}
+                    queryResult.columns.forEach((c, i) => { obj[c] = r[i] })
+                    return obj
+                  })
+                  exportCSV(rows, 'sqlite-query', queryResult.columns)
+                }}>Export Results</Button>
+            )}
+            <Button size="sm" variant="outline" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={reset}>New Database</Button>
+          </div>
+        )}
       </div>
 
       {/* File picker */}
-      <Card>
-        <div className="flex items-end gap-3">
-          <Input
-            label="SQLite Database"
-            value={filePath}
-            onChange={e => setFilePath(e.target.value)}
-            placeholder="/path/to/database.db"
-            className="flex-1"
-          />
-          <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
-          <Button variant="primary" onClick={open} loading={loading} disabled={!filePath}>Open</Button>
-        </div>
-      </Card>
+      {!dbInfo && !loading && (
+        <Card>
+          <div className="flex items-end gap-3">
+            <Input
+              label="SQLite Database"
+              value={filePath}
+              onChange={e => setFilePath(e.target.value)}
+              placeholder="/path/to/database.db"
+              className="flex-1"
+            />
+            <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
+            <Button variant="primary" onClick={() => open()} loading={loading} disabled={!filePath}>Open</Button>
+          </div>
+        </Card>
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -104,11 +144,20 @@ export default function SQLiteBrowser(): React.JSX.Element {
         </div>
       )}
 
-      {!dbInfo && !loading && (
+      {!dbInfo && !loading && !filePath && (
+        <DropZone
+          onFiles={handleDrop}
+          label="Drop a SQLite database to browse"
+          hint="Supports .sqlite, .db, .sqlite3 files — read-only, no modifications made"
+          className="min-h-40"
+        />
+      )}
+
+      {!dbInfo && !loading && filePath && (
         <EmptyState
           icon={<Database className="w-7 h-7" />}
           title="Open a SQLite database"
-          description="Supports any .sqlite, .db, or .sqlite3 file. Read-only — no modifications made."
+          description="Click Open to browse the database structure and run queries."
         />
       )}
 

@@ -42,8 +42,6 @@ function createWindow(): BrowserWindow {
     else mainWindow?.maximize()
   })
   ipcMain.on('window:close', () => mainWindow?.close())
-  ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
-  ipcMain.handle('window:platform', () => process.platform)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])

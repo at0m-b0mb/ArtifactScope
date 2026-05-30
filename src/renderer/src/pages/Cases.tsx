@@ -19,6 +19,8 @@ interface CreateForm {
 
 const EMPTY_FORM: CreateForm = { name: '', case_number: '', investigator: '', agency: '', status: 'open', priority: 'medium', description: '', tags: '' }
 
+interface DeleteTarget { id: string; name: string }
+
 interface CaseTemplate {
   id: string
   name: string
@@ -110,6 +112,7 @@ export default function Cases(): React.JSX.Element {
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM)
   const [creating, setCreating] = useState(false)
   const [template, setTemplate] = useState<string>('blank')
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
   function applyTemplate(id: string) {
     setTemplate(id)
@@ -117,8 +120,14 @@ export default function Cases(): React.JSX.Element {
     setForm(p => ({ ...EMPTY_FORM, ...t.defaults, name: p.name, case_number: p.case_number, investigator: p.investigator, agency: p.agency }))
   }
 
-  function openCreate() {
-    setForm(EMPTY_FORM)
+  async function openCreate() {
+    const r = await api.settings.get()
+    const s = r.data as Record<string, string> | null
+    setForm({
+      ...EMPTY_FORM,
+      investigator: s?.default_investigator ?? '',
+      agency: s?.default_agency ?? '',
+    })
     setTemplate('blank')
     setShowCreate(true)
   }
@@ -145,11 +154,16 @@ export default function Cases(): React.JSX.Element {
     navigate(`/cases/${newCase.id}`)
   }
 
-  async function handleDelete(id: string, name: string, e: React.MouseEvent) {
+  function handleDelete(id: string, name: string, e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm(`Delete case "${name}"? This cannot be undone.`)) return
-    await api.cases.delete(id)
+    setDeleteTarget({ id, name })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    await api.cases.delete(deleteTarget.id)
     success('Case deleted')
+    setDeleteTarget(null)
     load()
   }
 
@@ -291,6 +305,19 @@ export default function Cases(): React.JSX.Element {
             <Button type="submit" variant="primary" loading={creating}>Create Case</Button>
           </div>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Case" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            Are you sure you want to delete <strong className="text-white">{deleteTarget?.name}</strong>? This will remove all associated evidence, custody logs, and notes. This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" icon={<Trash2 className="w-4 h-4" />} onClick={confirmDelete}>Delete Case</Button>
+          </div>
+        </div>
       </Dialog>
     </div>
   )

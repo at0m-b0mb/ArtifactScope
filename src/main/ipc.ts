@@ -285,7 +285,7 @@ export function registerIPCHandlers(): void {
 
   // ── Window controls ───────────────────────────────────────────────────────
   ipcMain.handle('window:is-maximized', () => {
-    const win = BrowserWindow.getFocusedWindow()
+    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
     return win?.isMaximized() ?? false
   })
   ipcMain.handle('window:platform', () => process.platform)

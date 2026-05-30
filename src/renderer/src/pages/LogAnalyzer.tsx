@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
-import { ScrollText, FolderOpen, Search } from 'lucide-react'
+import { ScrollText, FolderOpen, Search, Download, RotateCcw } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input, Select } from '../components/ui/Input'
+import { DropZone } from '../components/ui/DropZone'
 import { Spinner } from '../components/ui/Progress'
-import { EmptyState } from '../components/ui/EmptyState'
 import { KeyValueGrid } from '../components/ui/KeyValueGrid'
 import { api } from '../lib/api'
+import { exportCSV, exportJSON } from '../lib/export'
+import { pushRecentFile } from '../lib/storage'
 
 interface LogLine {
   line_num: number
@@ -64,13 +66,30 @@ export default function LogAnalyzer(): React.JSX.Element {
     if (r.data) setFilePath(r.data as string)
   }
 
-  async function analyze() {
-    if (!filePath) return
+  async function analyze(overridePath?: string) {
+    const target = overridePath || filePath
+    if (!target) return
+    if (overridePath) setFilePath(overridePath)
     setLoading(true)
     setResult(null)
-    const r = await api.log.analyze(filePath)
+    const r = await api.log.analyze(target)
     setLoading(false)
-    if (r.data) setResult(r.data as LogResult)
+    if (r.data) {
+      setResult(r.data as LogResult)
+      const name = target.split(/[/\\]/).pop() || 'log'
+      pushRecentFile({ path: target, label: name, kind: 'log', page: '/log-analyzer' })
+    }
+  }
+
+  function handleDrop(paths: string[]) {
+    if (paths[0]) analyze(paths[0])
+  }
+
+  function reset() {
+    setResult(null)
+    setFilePath('')
+    setSearch('')
+    setLevelFilter('')
   }
 
   const lines = result?.lines ?? []
@@ -84,25 +103,41 @@ export default function LogAnalyzer(): React.JSX.Element {
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <ScrollText className="w-5 h-5 text-primary-400" />
-        <h1 className="text-lg font-bold text-white">Log Analyzer</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ScrollText className="w-5 h-5 text-primary-400" />
+          <h1 className="text-lg font-bold text-white">Log Analyzer</h1>
+        </div>
+        {result && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />}
+              onClick={() => exportCSV(
+                filtered.slice(0, 10000).map(l => ({ line: l.line_num, timestamp: l.timestamp ?? '', level: l.level ?? '', message: l.message })) as unknown as Record<string, unknown>[],
+                'log-analysis', ['line', 'timestamp', 'level', 'message']
+              )}>Export CSV</Button>
+            <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />}
+              onClick={() => exportJSON({ stats: result.stats, lines: filtered.slice(0, 10000) }, `log-analysis`)}>Export JSON</Button>
+            <Button size="sm" variant="outline" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={reset}>New File</Button>
+          </div>
+        )}
       </div>
 
       {/* File picker */}
-      <Card>
-        <div className="flex items-end gap-3">
-          <Input
-            label="Log File"
-            value={filePath}
-            onChange={e => setFilePath(e.target.value)}
-            placeholder="/path/to/file.log"
-            className="flex-1"
-          />
-          <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
-          <Button variant="primary" onClick={analyze} loading={loading} disabled={!filePath}>Analyze</Button>
-        </div>
-      </Card>
+      {!result && !loading && (
+        <Card>
+          <div className="flex items-end gap-3">
+            <Input
+              label="Log File"
+              value={filePath}
+              onChange={e => setFilePath(e.target.value)}
+              placeholder="/path/to/file.log"
+              className="flex-1"
+            />
+            <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
+            <Button variant="primary" onClick={() => analyze()} loading={loading} disabled={!filePath}>Analyze</Button>
+          </div>
+        </Card>
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -111,11 +146,12 @@ export default function LogAnalyzer(): React.JSX.Element {
         </div>
       )}
 
-      {!result && !loading && (
-        <EmptyState
-          icon={<ScrollText className="w-7 h-7" />}
-          title="Open a log file"
-          description="Supports Apache, syslog, JSON, IIS, and generic timestamped log formats."
+      {!result && !loading && !filePath && (
+        <DropZone
+          onFiles={handleDrop}
+          label="Drop a log file to analyze"
+          hint="Supports Apache, syslog, JSON, IIS, and generic timestamped log formats"
+          className="min-h-40"
         />
       )}
 

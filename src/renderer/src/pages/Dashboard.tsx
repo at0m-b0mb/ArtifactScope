@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderKanban, FileSearch, Globe, Monitor, Hash, Shield, Activity, Clock, AlertTriangle, CheckCircle, FileText, X } from 'lucide-react'
+import { FolderKanban, FileSearch, Globe, Monitor, Hash, Shield, Activity, Clock, AlertTriangle, CheckCircle, FileText, X, ArrowRight, Lightbulb, Keyboard } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -8,8 +8,9 @@ import { SkeletonRow, SkeletonStat } from '../components/ui/Skeleton'
 import { api } from '../lib/api'
 import { timeAgo } from '../lib/format'
 import { useCaseStore } from '../stores/caseStore'
-import { recentFiles, clearRecentFiles, type RecentFile } from '../lib/storage'
+import { recentFiles, clearRecentFiles, type RecentFile, readLS, writeLS } from '../lib/storage'
 import { ActivityHeatmap } from '../components/ActivityHeatmap'
+import { useUIStore } from '../stores/uiStore'
 
 const QUICK_ACTIONS = [
   { label: 'Analyze File',   icon: FileSearch, to: '/file-analyzer',   color: 'from-primary-600 to-primary-700' },
@@ -52,6 +53,15 @@ export default function Dashboard(): React.JSX.Element {
 
   const openCases = (cases as { status: string }[]).filter(c => c.status === 'open').length
   const criticalCases = (cases as { priority: string }[]).filter(c => c.priority === 'critical').length
+  const { togglePalette } = useUIStore()
+  const [tipsHidden, setTipsHidden] = useState(() => readLS<boolean>('tips-hidden', false))
+  const isNewUser = !loading && cases.length === 0 && activity.length === 0
+  const showTips = !tipsHidden && !isNewUser
+
+  function hideTips() {
+    setTipsHidden(true)
+    writeLS('tips-hidden', true)
+  }
 
   return (
     <div className="p-6 space-y-6 min-h-full bg-surface-0">
@@ -88,6 +98,47 @@ export default function Dashboard(): React.JSX.Element {
           </Card>
         ))}
       </div>
+
+      {/* Getting Started — shown to brand-new users */}
+      {isNewUser && (
+        <Card className="border-primary-600/30 bg-gradient-to-br from-primary-600/5 to-accent-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-warning" />
+              Getting Started
+            </CardTitle>
+          </CardHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
+            {[
+              { step: '1', title: 'Create a Case', desc: 'Organize your investigation with cases, evidence, and chain of custody.', action: 'New Case', to: '/cases' },
+              { step: '2', title: 'Analyze Evidence', desc: 'Drop files to calculate hashes, extract strings, detect file types, and hunt IOCs.', action: 'File Analyzer', to: '/file-analyzer' },
+              { step: '3', title: 'Build Your Hash DB', desc: 'Import known-good / known-bad hash sets (NSRL, custom CSV) for fast lookups.', action: 'Hash Database', to: '/hash-db' },
+            ].map(s => (
+              <div key={s.step} className="flex flex-col p-3 rounded-xl bg-surface-2 border border-surface-4">
+                <div className="w-6 h-6 rounded-full bg-primary-600/20 border border-primary-600/30 flex items-center justify-center text-xs font-bold text-primary-400 mb-2">{s.step}</div>
+                <p className="text-sm font-semibold text-white">{s.title}</p>
+                <p className="text-xs text-muted mt-0.5 flex-1">{s.desc}</p>
+                <Button size="sm" variant="outline" className="mt-3 self-start" icon={<ArrowRight className="w-3 h-3" />}
+                  onClick={() => navigate(s.to)}>{s.action}</Button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs text-muted">
+            <span className="flex items-center gap-1"><Keyboard className="w-3 h-3" /> Press <kbd className="px-1 py-0.5 rounded bg-surface-3 border border-surface-4 text-[10px] font-mono">Ctrl+K</kbd> to open the command palette anytime</span>
+          </div>
+        </Card>
+      )}
+
+      {/* Tips for returning users */}
+      {showTips && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-surface-2 border border-surface-4 text-xs text-muted">
+          <Lightbulb className="w-3.5 h-3.5 text-warning flex-shrink-0" />
+          <span className="flex-1">
+            <strong className="text-white">Tip:</strong> Drop files anywhere in the app to analyze them instantly. Use <button onClick={togglePalette} className="text-primary-400 hover:text-primary-300 transition-colors">Ctrl+K</button> to jump to any tool or paste a hash for quick lookup.
+          </span>
+          <button onClick={hideTips} className="text-muted hover:text-white transition-colors"><X className="w-3 h-3" /></button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         {/* Quick Actions */}

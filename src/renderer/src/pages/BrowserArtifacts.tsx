@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Globe, RefreshCw, Clock } from 'lucide-react'
+import { Globe, RefreshCw, Clock, Download } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Table, Column } from '../components/ui/Table'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { exportCSV, exportJSON } from '../lib/export'
 
 interface HistoryRow { url: string; title: string; visit_time: string; visit_count: number; browser: string; profile: string }
 interface DownloadRow { url: string; target_path: string; start_time: string; end_time: string; received_bytes: number; total_bytes: number; state: number; browser: string }
@@ -108,9 +109,22 @@ export default function BrowserArtifacts(): React.JSX.Element {
           <Globe className="w-5 h-5 text-primary-400" />
           <h1 className="text-lg font-bold text-white">Browser Artifacts</h1>
         </div>
-        <Button variant="primary" icon={loading ? undefined : <RefreshCw className="w-4 h-4" />} loading={loading} onClick={collect}>
-          {data ? 'Refresh' : 'Collect Browser Data'}
-        </Button>
+        <div className="flex gap-2">
+          {data && (
+            <>
+              <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => exportCSV(
+                  filteredHistory as unknown as Record<string, unknown>[],
+                  'browser-history', ['visit_time', 'browser', 'title', 'url', 'visit_count']
+                )}>Export History</Button>
+              <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => exportJSON(data, 'browser-artifacts')}>Export All</Button>
+            </>
+          )}
+          <Button variant="primary" icon={loading ? undefined : <RefreshCw className="w-4 h-4" />} loading={loading} onClick={collect}>
+            {data ? 'Refresh' : 'Collect Browser Data'}
+          </Button>
+        </div>
       </div>
 
       {!data && !loading && (

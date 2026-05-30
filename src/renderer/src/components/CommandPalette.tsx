@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, ArrowRight, LayoutDashboard, FolderKanban, FileSearch, Image, AlignLeft, Archive,
   Globe, Monitor, BookKey, Mail, FileText, Network, Clock3, HardDrive, Hash, FileOutput,
-  Activity, Settings, Database, HelpCircle, Eye, GitCompare, Zap,
+  Activity, Settings, Database, HelpCircle, Eye, GitCompare, Zap, FolderOpen,
 } from 'lucide-react'
 import { useUIStore } from '../stores/uiStore'
 import { Kbd } from './ui/Kbd'
@@ -88,6 +88,22 @@ export function CommandPalette(): React.ReactPortal | null {
       id: 'show-help', label: 'Keyboard Shortcuts', group: 'Help', icon: HelpCircle,
       hint: '?', keywords: 'shortcuts cheatsheet keys',
       run: () => setHelpOpen(true),
+    })
+    base.push({
+      id: 'open-file', label: 'Open File for Analysis', group: 'Quick Action', icon: FolderOpen,
+      keywords: 'browse pick select file',
+      run: async () => {
+        const r = await window.bridge.util.openFile(['*'])
+        if (r?.data) { setPendingFile(r.data as string); navigate('/file-analyzer') }
+      },
+    })
+    base.push({
+      id: 'open-db', label: 'Open SQLite Database', group: 'Quick Action', icon: Database,
+      keywords: 'browse sqlite db database',
+      run: async () => {
+        const r = await window.bridge.util.openFile(['db', 'sqlite', 'sqlite3', '*'])
+        if (r?.data) { setPendingFile(r.data as string); navigate('/sqlite') }
+      },
     })
     return base
   }, [navigate, setHelpOpen])

@@ -1,14 +1,15 @@
 import React, { useState } from 'react'
-import { Crosshair, FolderOpen, Download, Filter, AlertTriangle } from 'lucide-react'
+import { Crosshair, FolderOpen, Download, Filter, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Input, Select } from '../components/ui/Input'
+import { DropZone } from '../components/ui/DropZone'
 import { Spinner } from '../components/ui/Progress'
-import { EmptyState } from '../components/ui/EmptyState'
 import { Table, Column } from '../components/ui/Table'
 import { api } from '../lib/api'
 import { formatBytes } from '../lib/format'
+import { pushRecentFile } from '../lib/storage'
 
 interface IOCMatch {
   type: string
@@ -63,13 +64,30 @@ export default function IOCHunter(): React.JSX.Element {
     if (r.data) setFilePath(r.data as string)
   }
 
-  async function hunt() {
-    if (!filePath) return
+  async function hunt(overridePath?: string) {
+    const target = overridePath || filePath
+    if (!target) return
+    if (overridePath) setFilePath(overridePath)
     setLoading(true)
     setResult(null)
-    const r = await api.ioc.hunt(filePath)
+    const r = await api.ioc.hunt(target)
     setLoading(false)
-    if (r.data) setResult(r.data as IOCResult)
+    if (r.data) {
+      setResult(r.data as IOCResult)
+      const name = target.split(/[/\\]/).pop() || 'file'
+      pushRecentFile({ path: target, label: name, kind: 'ioc', page: '/strings' })
+    }
+  }
+
+  function handleDrop(paths: string[]) {
+    if (paths[0]) hunt(paths[0])
+  }
+
+  function reset() {
+    setResult(null)
+    setFilePath('')
+    setSearch('')
+    setTypeFilter('')
   }
 
   async function exportCSV() {
@@ -112,24 +130,29 @@ export default function IOCHunter(): React.JSX.Element {
           <h1 className="text-lg font-bold text-white">Strings &amp; IOC Hunter</h1>
         </div>
         {result && (
-          <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />} onClick={exportCSV}>Export CSV</Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />} onClick={exportCSV}>Export CSV</Button>
+            <Button size="sm" variant="outline" icon={<RotateCcw className="w-3.5 h-3.5" />} onClick={reset}>New File</Button>
+          </div>
         )}
       </div>
 
       {/* File picker */}
-      <Card>
-        <div className="flex items-end gap-3">
-          <Input
-            label="File to Hunt"
-            value={filePath}
-            onChange={e => setFilePath(e.target.value)}
-            placeholder="/path/to/any/file"
-            className="flex-1"
-          />
-          <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
-          <Button variant="primary" onClick={hunt} loading={loading} disabled={!filePath}>Hunt IOCs</Button>
-        </div>
-      </Card>
+      {!result && !loading && (
+        <Card>
+          <div className="flex items-end gap-3">
+            <Input
+              label="File to Hunt"
+              value={filePath}
+              onChange={e => setFilePath(e.target.value)}
+              placeholder="/path/to/any/file"
+              className="flex-1"
+            />
+            <Button variant="outline" icon={<FolderOpen className="w-4 h-4" />} onClick={browse}>Browse</Button>
+            <Button variant="primary" onClick={() => hunt()} loading={loading} disabled={!filePath}>Hunt IOCs</Button>
+          </div>
+        </Card>
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -138,11 +161,12 @@ export default function IOCHunter(): React.JSX.Element {
         </div>
       )}
 
-      {!result && !loading && (
-        <EmptyState
-          icon={<Crosshair className="w-7 h-7" />}
-          title="Hunt for indicators of compromise"
-          description="Scans any file for IPs, URLs, domains, emails, hashes, Bitcoin addresses, credit cards, CVEs, PowerShell, registry keys, and more."
+      {!result && !loading && !filePath && (
+        <DropZone
+          onFiles={handleDrop}
+          label="Drop a file to hunt for IOCs"
+          hint="Scans for IPs, URLs, domains, emails, hashes, Bitcoin addresses, credit cards, CVEs, PowerShell, and more"
+          className="min-h-40"
         />
       )}
 
